@@ -1,7 +1,7 @@
 import streamlit as st
 import pandas as pd
 from database import init_db
-from models import ShippingEntry
+from models import ShippingEntry, User
 from components.forms import render_entry_form
 from components.charts import (
     create_shipping_timeline,
@@ -13,6 +13,30 @@ from components.achievements import check_achievements, render_achievements
 from components.idea_generator import render_idea_generator
 from utils import get_date_range, calculate_streak
 
+def initialize_session_state():
+    if 'authenticated' not in st.session_state:
+        st.session_state.authenticated = False
+    if 'user' not in st.session_state:
+        st.session_state.user = None
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "Dashboard"
+
+def login_form():
+    st.title("🚢 Shipping Dashboard Login")
+    
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    
+    if st.button("Login"):
+        user = User.authenticate(username, password)
+        if user:
+            st.session_state.authenticated = True
+            st.session_state.user = user
+            st.success("Successfully logged in!")
+            st.rerun()
+        else:
+            st.error("Invalid username or password")
+
 def main():
     st.set_page_config(
         page_title="Shipping Dashboard",
@@ -22,6 +46,14 @@ def main():
     
     # Initialize database
     init_db()
+    
+    # Initialize session state
+    initialize_session_state()
+    
+    # Check authentication
+    if not st.session_state.authenticated:
+        login_form()
+        return
     
     # Navigation menu with icons
     st.markdown("""
@@ -54,6 +86,16 @@ def main():
         </style>
     """, unsafe_allow_html=True)
 
+    # User info and logout
+    col1, col2 = st.columns([3, 1])
+    with col1:
+        st.write(f"Welcome, {st.session_state.user['username']} ({st.session_state.user['role']})")
+    with col2:
+        if st.button("Logout"):
+            st.session_state.authenticated = False
+            st.session_state.user = None
+            st.rerun()
+
     cols = st.columns([1, 1, 1, 1, 1])
     pages = {
         "📊 Dashboard": "Dashboard",
@@ -62,9 +104,6 @@ def main():
         "🏆 Awards": "Achievements",
         "💡 Ideas": "Idea Generator"
     }
-
-    if 'current_page' not in st.session_state:
-        st.session_state.current_page = "Dashboard"
 
     for idx, (icon_label, page_name) in enumerate(pages.items()):
         with cols[idx]:
@@ -79,8 +118,9 @@ def main():
 
     st.markdown("---")  # Divider between navigation and content
     
-    # Get all entries
-    entries = ShippingEntry.get_all_entries()
+    # Get all entries for the current user
+    user_id = st.session_state.user['id'] if st.session_state.authenticated else None
+    entries = ShippingEntry.get_all_entries(user_id)
     
     # Check achievements
     check_achievements(entries)
@@ -123,7 +163,11 @@ def main():
         render_project_details(entries)
     
     elif st.session_state.current_page == "Add Entry":
-        render_entry_form()
+        # Only allow adding entries if authenticated
+        if st.session_state.authenticated:
+            render_entry_form()
+        else:
+            st.warning("Please log in to add entries")
     
     elif st.session_state.current_page == "Achievements":
         render_achievements()

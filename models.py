@@ -1,18 +1,63 @@
 from datetime import datetime
 from database import get_db_connection
 from psycopg2.extras import RealDictCursor
+from werkzeug.security import generate_password_hash, check_password_hash
+
+class User:
+    @staticmethod
+    def get_by_username(username):
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        cur.execute("""
+            SELECT * FROM users WHERE username = %s
+        """, (username,))
+        
+        user = cur.fetchone()
+        cur.close()
+        conn.close()
+        return user
+    
+    @staticmethod
+    def authenticate(username, password):
+        user = User.get_by_username(username)
+        if user and check_password_hash(user['password_hash'], password):
+            return user
+        return None
+    
+    @staticmethod
+    def create_user(username, password, role='guest'):
+        conn = get_db_connection()
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        
+        try:
+            cur.execute("""
+                INSERT INTO users (username, password_hash, role)
+                VALUES (%s, %s, %s)
+                RETURNING *
+            """, (username, generate_password_hash(password), role))
+            
+            user = cur.fetchone()
+            conn.commit()
+            return user
+        except Exception as e:
+            conn.rollback()
+            raise e
+        finally:
+            cur.close()
+            conn.close()
 
 class ShippingEntry:
     @staticmethod
-    def add_entry(date, project_name, description, category, status):
+    def add_entry(date, project_name, description, category, status, user_id=None):
         conn = get_db_connection()
         cur = conn.cursor()
         
         cur.execute("""
-            INSERT INTO shipping_entries (date, project_name, description, category, status)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO shipping_entries (date, project_name, description, category, status, user_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
             RETURNING id
-        """, (date, project_name, description, category, status))
+        """, (date, project_name, description, category, status, user_id))
         
         entry_id = cur.fetchone()[0]
         conn.commit()
@@ -21,15 +66,23 @@ class ShippingEntry:
         return entry_id
 
     @staticmethod
-    def get_all_entries():
+    def get_all_entries(user_id=None):
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        cur.execute("""
-            SELECT id, date::date as date, project_name, description, category, status, created_at 
-            FROM shipping_entries
-            ORDER BY date DESC
-        """)
+        if user_id:
+            cur.execute("""
+                SELECT id, date::date as date, project_name, description, category, status, created_at 
+                FROM shipping_entries
+                WHERE user_id = %s OR user_id IS NULL
+                ORDER BY date DESC
+            """, (user_id,))
+        else:
+            cur.execute("""
+                SELECT id, date::date as date, project_name, description, category, status, created_at 
+                FROM shipping_entries
+                ORDER BY date DESC
+            """)
         
         entries = cur.fetchall()
         cur.close()
@@ -50,7 +103,8 @@ class Achievement:
                 description TEXT,
                 badge_icon TEXT,
                 unlocked_at TIMESTAMP DEFAULT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                user_id INTEGER
             )
         """)
         
@@ -77,14 +131,21 @@ class Achievement:
         conn.close()
 
     @staticmethod
-    def get_achievements():
+    def get_achievements(user_id=None):
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        cur.execute("""
-            SELECT * FROM achievements
-            ORDER BY unlocked_at NULLS LAST, name
-        """)
+        if user_id:
+            cur.execute("""
+                SELECT * FROM achievements
+                WHERE user_id = %s OR user_id IS NULL
+                ORDER BY unlocked_at NULLS LAST, name
+            """, (user_id,))
+        else:
+            cur.execute("""
+                SELECT * FROM achievements
+                ORDER BY unlocked_at NULLS LAST, name
+            """)
         
         achievements = cur.fetchall()
         cur.close()
@@ -92,16 +153,16 @@ class Achievement:
         return achievements
 
     @staticmethod
-    def unlock_achievement(name):
+    def unlock_achievement(name, user_id=None):
         conn = get_db_connection()
         cur = conn.cursor()
         
         cur.execute("""
             UPDATE achievements
-            SET unlocked_at = CURRENT_TIMESTAMP
+            SET unlocked_at = CURRENT_TIMESTAMP, user_id = %s
             WHERE name = %s AND unlocked_at IS NULL
             RETURNING id
-        """, (name,))
+        """, (user_id, name))
         
         unlocked = cur.fetchone() is not None
         conn.commit()

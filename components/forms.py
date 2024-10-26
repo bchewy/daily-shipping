@@ -21,9 +21,10 @@ def render_entry_form():
         
         if submitted:
             if project_name and description:
+                user_id = st.session_state.user['id'] if st.session_state.authenticated else None
                 ShippingEntry.add_entry(
                     date, project_name, description, 
-                    category, status
+                    category, status, user_id
                 )
                 st.success("Entry added successfully!")
             else:
