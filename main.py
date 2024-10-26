@@ -22,20 +22,21 @@ def initialize_session_state():
         st.session_state.current_page = "Dashboard"
 
 def login_form():
-    st.title("🚢 Shipping Dashboard Login")
+    st.title("🚢 Shipping Dashboard")
     
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    
-    if st.button("Login"):
-        user = User.authenticate(username, password)
-        if user:
-            st.session_state.authenticated = True
-            st.session_state.user = user
-            st.success("Successfully logged in!")
-            st.rerun()
-        else:
-            st.error("Invalid username or password")
+    with st.expander("Login"):
+        username = st.text_input("Username")
+        password = st.text_input("Password", type="password")
+        
+        if st.button("Login"):
+            user = User.authenticate(username, password)
+            if user:
+                st.session_state.authenticated = True
+                st.session_state.user = user
+                st.success("Successfully logged in!")
+                st.rerun()
+            else:
+                st.error("Invalid username or password")
 
 def main():
     st.set_page_config(
@@ -49,11 +50,6 @@ def main():
     
     # Initialize session state
     initialize_session_state()
-    
-    # Check authentication
-    if not st.session_state.authenticated:
-        login_form()
-        return
     
     # Navigation menu with icons
     st.markdown("""
@@ -86,15 +82,26 @@ def main():
         </style>
     """, unsafe_allow_html=True)
 
-    # User info and logout
+    # User info and login/logout
     col1, col2 = st.columns([3, 1])
     with col1:
-        st.write(f"Welcome, {st.session_state.user['username']} ({st.session_state.user['role']})")
+        if st.session_state.authenticated:
+            st.write(f"Welcome, {st.session_state.user['username']} ({st.session_state.user['role']})")
+        else:
+            st.write("Welcome, Guest! Please login to add entries.")
     with col2:
-        if st.button("Logout"):
-            st.session_state.authenticated = False
-            st.session_state.user = None
-            st.rerun()
+        if st.session_state.authenticated:
+            if st.button("Logout"):
+                st.session_state.authenticated = False
+                st.session_state.user = None
+                st.rerun()
+        else:
+            if st.button("Login"):
+                st.session_state.show_login = True
+                st.rerun()
+
+    if not st.session_state.authenticated and st.session_state.get('show_login', False):
+        login_form()
 
     cols = st.columns([1, 1, 1, 1, 1])
     pages = {
@@ -118,15 +125,21 @@ def main():
 
     st.markdown("---")  # Divider between navigation and content
     
-    # Get all entries for the current user
-    user_id = st.session_state.user['id'] if st.session_state.authenticated else None
-    entries = ShippingEntry.get_all_entries(user_id)
+    # Get all entries
+    entries = ShippingEntry.get_all_entries()
     
-    # Check achievements
-    check_achievements(entries)
+    # Check achievements if authenticated
+    if st.session_state.authenticated:
+        check_achievements(entries)
     
     # Display content based on selected page
-    if st.session_state.current_page == "Dashboard":
+    if st.session_state.current_page == "Add Entry":
+        if st.session_state.authenticated:
+            render_entry_form()
+        else:
+            st.warning("Please login to add new entries.")
+            login_form()
+    elif st.session_state.current_page == "Dashboard":
         # Display metrics
         calculate_metrics(entries)
         
@@ -161,13 +174,6 @@ def main():
         
         # Project details
         render_project_details(entries)
-    
-    elif st.session_state.current_page == "Add Entry":
-        # Only allow adding entries if authenticated
-        if st.session_state.authenticated:
-            render_entry_form()
-        else:
-            st.warning("Please log in to add entries")
     
     elif st.session_state.current_page == "Achievements":
         render_achievements()

@@ -53,41 +53,39 @@ class ShippingEntry:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        cur.execute("""
-            INSERT INTO shipping_entries (date, project_name, description, category, status, user_id)
-            VALUES (%s, %s, %s, %s, %s, %s)
-            RETURNING id
-        """, (date, project_name, description, category, status, user_id))
-        
-        entry_id = cur.fetchone()[0]
-        conn.commit()
-        cur.close()
-        conn.close()
-        return entry_id
+        try:
+            cur.execute("""
+                INSERT INTO shipping_entries (date, project_name, description, category, status, user_id)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                RETURNING id
+            """, (date, project_name, description, category, status, user_id))
+            
+            entry_id = cur.fetchone()[0]
+            conn.commit()
+            return entry_id
+        finally:
+            cur.close()
+            conn.close()
 
     @staticmethod
     def get_all_entries(user_id=None):
         conn = get_db_connection()
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
-        if user_id:
+        try:
+            # Get all public entries and user-specific entries if authenticated
             cur.execute("""
-                SELECT id, date::date as date, project_name, description, category, status, created_at 
-                FROM shipping_entries
-                WHERE user_id = %s OR user_id IS NULL
-                ORDER BY date DESC
-            """, (user_id,))
-        else:
-            cur.execute("""
-                SELECT id, date::date as date, project_name, description, category, status, created_at 
+                SELECT id, date::date as date, project_name, description, 
+                       category, status, created_at 
                 FROM shipping_entries
                 ORDER BY date DESC
             """)
-        
-        entries = cur.fetchall()
-        cur.close()
-        conn.close()
-        return entries
+            
+            entries = cur.fetchall()
+            return entries
+        finally:
+            cur.close()
+            conn.close()
 
 class Achievement:
     @staticmethod
@@ -157,15 +155,17 @@ class Achievement:
         conn = get_db_connection()
         cur = conn.cursor()
         
-        cur.execute("""
-            UPDATE achievements
-            SET unlocked_at = CURRENT_TIMESTAMP, user_id = %s
-            WHERE name = %s AND unlocked_at IS NULL
-            RETURNING id
-        """, (user_id, name))
-        
-        unlocked = cur.fetchone() is not None
-        conn.commit()
-        cur.close()
-        conn.close()
-        return unlocked
+        try:
+            cur.execute("""
+                UPDATE achievements
+                SET unlocked_at = CURRENT_TIMESTAMP, user_id = %s
+                WHERE name = %s AND unlocked_at IS NULL
+                RETURNING id
+            """, (user_id, name))
+            
+            unlocked = cur.fetchone() is not None
+            conn.commit()
+            return unlocked
+        finally:
+            cur.close()
+            conn.close()
