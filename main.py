@@ -75,7 +75,7 @@ def main():
                 type="primary" if st.session_state.current_page == page_name else "secondary"
             ):
                 st.session_state.current_page = page_name
-                st.experimental_rerun()
+                st.rerun()
 
     st.markdown("---")  # Divider between navigation and content
     
