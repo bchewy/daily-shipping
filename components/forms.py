@@ -11,7 +11,7 @@ def render_entry_form():
         description = st.text_area("Description")
         category = st.selectbox("Category", [
             "Feature", "Bug Fix", "Enhancement", 
-            "Documentation", "Refactoring"
+            "Documentation", "Refactoring", "Web Development", "GenAI", "Game"
         ])
         status = st.selectbox("Status", [
             "Completed", "In Progress", "Planned"
