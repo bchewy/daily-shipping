@@ -4,12 +4,20 @@ from datetime import datetime, timedelta
 
 def calculate_metrics(entries):
     df = pd.DataFrame(entries)
-    df['date'] = pd.to_datetime(df['date'])
+    if len(entries) > 0:
+        print('Columns available:', df.columns.tolist())
+        df['date'] = pd.to_datetime(df['date']) if 'date' in df.columns else pd.Series(dtype='datetime64[ns]')
     
     # Calculate metrics
     total_ships = len(df)
-    ships_last_week = len(df[df['date'] >= datetime.now() - timedelta(days=7)])
-    completion_rate = len(df[df['status'] == 'Completed']) / total_ships * 100
+    
+    # Only calculate these metrics if we have date column and entries
+    if 'date' in df.columns and len(df) > 0:
+        ships_last_week = len(df[df['date'] >= datetime.now() - timedelta(days=7)])
+        completion_rate = len(df[df['status'] == 'Completed']) / total_ships * 100 if total_ships > 0 else 0
+    else:
+        ships_last_week = 0
+        completion_rate = 0
     
     # Display metrics
     col1, col2, col3 = st.columns(3)
@@ -26,10 +34,13 @@ def calculate_metrics(entries):
 def render_project_details(entries):
     df = pd.DataFrame(entries)
     
-    st.subheader("Recent Projects")
-    
-    for _, row in df.head(5).iterrows():
-        with st.expander(f"{row['project_name']} - {row['date']}"):
-            st.write(f"**Category:** {row['category']}")
-            st.write(f"**Status:** {row['status']}")
-            st.write(f"**Description:** {row['description']}")
+    if len(df) > 0:
+        st.subheader("Recent Projects")
+        
+        for _, row in df.head(5).iterrows():
+            with st.expander(f"{row['project_name']} - {row['date']}"):
+                st.write(f"**Category:** {row['category']}")
+                st.write(f"**Status:** {row['status']}")
+                st.write(f"**Description:** {row['description']}")
+    else:
+        st.info("No projects to display yet. Add your first shipping entry!")
