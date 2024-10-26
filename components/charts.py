@@ -7,15 +7,22 @@ def create_shipping_timeline(entries):
     df = pd.DataFrame(entries)
     if len(df) > 0 and 'date' in df.columns and 'project_name' in df.columns:
         df['date'] = pd.to_datetime(df['date'])
+        # Add end date as 1 day after start date
+        df['end_date'] = df['date'] + pd.Timedelta(days=1)
         fig = px.timeline(
             df,
             x_start='date',
+            x_end='end_date',
             y='project_name',
             color='status',
             title='Shipping Timeline'
         )
         return fig
-    return px.timeline(title='No data available')
+    else:
+        # Create an empty figure for no data case
+        fig = go.Figure()
+        fig.update_layout(title='No timeline data available')
+        return fig
 
 def create_category_distribution(entries):
     df = pd.DataFrame(entries)
