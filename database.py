@@ -16,7 +16,7 @@ def init_db():
     conn = get_db_connection()
     cur = conn.cursor()
     
-    # Create tables if they don't exist
+    # Create shipping_entries table if it doesn't exist
     cur.execute("""
         CREATE TABLE IF NOT EXISTS shipping_entries (
             id SERIAL PRIMARY KEY,
@@ -32,3 +32,7 @@ def init_db():
     conn.commit()
     cur.close()
     conn.close()
+    
+    # Initialize achievements
+    from models import Achievement
+    Achievement.init_achievements()

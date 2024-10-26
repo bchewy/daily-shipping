@@ -9,6 +9,7 @@ from components.charts import (
     create_shipping_frequency
 )
 from components.analytics import calculate_metrics, render_project_details
+from components.achievements import check_achievements, render_achievements
 from utils import get_date_range, calculate_streak
 
 def main():
@@ -26,10 +27,13 @@ def main():
     
     # Sidebar
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Dashboard", "Add Entry", "Analytics"])
+    page = st.sidebar.radio("Go to", ["Dashboard", "Add Entry", "Analytics", "Achievements"])
     
     # Get all entries
     entries = ShippingEntry.get_all_entries()
+    
+    # Check achievements
+    check_achievements(entries)
     
     if page == "Dashboard":
         # Display metrics
@@ -69,6 +73,9 @@ def main():
     
     elif page == "Add Entry":
         render_entry_form()
+    
+    elif page == "Achievements":
+        render_achievements()
     
     else:  # Analytics
         st.subheader("Shipping Analytics")
