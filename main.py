@@ -25,10 +25,10 @@ def login_form():
     st.title("🚢 Shipping Dashboard")
     
     with st.expander("Login"):
-        username = st.text_input("Username")
-        password = st.text_input("Password", type="password")
+        username = st.text_input("Username", key="login_username")
+        password = st.text_input("Password", type="password", key="login_password")
         
-        if st.button("Login"):
+        if st.button("Login", key="login_form_button"):
             user = User.authenticate(username, password)
             if user:
                 st.session_state.authenticated = True
@@ -91,12 +91,12 @@ def main():
             st.write("Welcome, Guest! Please login to add entries.")
     with col2:
         if st.session_state.authenticated:
-            if st.button("Logout"):
+            if st.button("Logout", key="nav_logout_button"):
                 st.session_state.authenticated = False
                 st.session_state.user = None
                 st.rerun()
         else:
-            if st.button("Login"):
+            if st.button("Login", key="nav_login_button"):
                 st.session_state.show_login = True
                 st.rerun()
 
