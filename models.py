@@ -26,7 +26,8 @@ class ShippingEntry:
         cur = conn.cursor(cursor_factory=RealDictCursor)
         
         cur.execute("""
-            SELECT * FROM shipping_entries
+            SELECT id, date::date as date, project_name, description, category, status, created_at 
+            FROM shipping_entries
             ORDER BY date DESC
         """)
         
