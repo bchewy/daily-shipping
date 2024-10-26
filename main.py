@@ -23,12 +23,61 @@ def main():
     # Initialize database
     init_db()
     
-    # Page header
-    st.title("🚢 Daily Shipping Dashboard")
-    
-    # Sidebar
-    st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Dashboard", "Add Entry", "Analytics", "Achievements", "Idea Generator"])
+    # Navigation menu with icons
+    st.markdown("""
+        <style>
+        .nav-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            padding: 10px;
+            background-color: #f0f2f6;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border-radius: 5px;
+            text-decoration: none;
+            color: #262730;
+            cursor: pointer;
+        }
+        .nav-item:hover {
+            background-color: #e0e2e6;
+        }
+        .nav-item.active {
+            background-color: #FF4B4B;
+            color: white;
+        }
+        </style>
+    """, unsafe_allow_html=True)
+
+    cols = st.columns([1, 1, 1, 1, 1])
+    pages = {
+        "📊 Dashboard": "Dashboard",
+        "➕ New": "Add Entry",
+        "📈 Analytics": "Analytics",
+        "🏆 Awards": "Achievements",
+        "💡 Ideas": "Idea Generator"
+    }
+
+    if 'current_page' not in st.session_state:
+        st.session_state.current_page = "Dashboard"
+
+    for idx, (icon_label, page_name) in enumerate(pages.items()):
+        with cols[idx]:
+            if st.button(
+                icon_label,
+                key=f"nav_{page_name}",
+                use_container_width=True,
+                type="primary" if st.session_state.current_page == page_name else "secondary"
+            ):
+                st.session_state.current_page = page_name
+                st.experimental_rerun()
+
+    st.markdown("---")  # Divider between navigation and content
     
     # Get all entries
     entries = ShippingEntry.get_all_entries()
@@ -36,7 +85,8 @@ def main():
     # Check achievements
     check_achievements(entries)
     
-    if page == "Dashboard":
+    # Display content based on selected page
+    if st.session_state.current_page == "Dashboard":
         # Display metrics
         calculate_metrics(entries)
         
@@ -72,13 +122,13 @@ def main():
         # Project details
         render_project_details(entries)
     
-    elif page == "Add Entry":
+    elif st.session_state.current_page == "Add Entry":
         render_entry_form()
     
-    elif page == "Achievements":
+    elif st.session_state.current_page == "Achievements":
         render_achievements()
     
-    elif page == "Idea Generator":
+    elif st.session_state.current_page == "Idea Generator":
         render_idea_generator()
     
     else:  # Analytics
