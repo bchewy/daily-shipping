@@ -10,6 +10,7 @@ from components.charts import (
 )
 from components.analytics import calculate_metrics, render_project_details
 from components.achievements import check_achievements, render_achievements
+from components.idea_generator import render_idea_generator
 from utils import get_date_range, calculate_streak
 
 def main():
@@ -27,7 +28,7 @@ def main():
     
     # Sidebar
     st.sidebar.title("Navigation")
-    page = st.sidebar.radio("Go to", ["Dashboard", "Add Entry", "Analytics", "Achievements"])
+    page = st.sidebar.radio("Go to", ["Dashboard", "Add Entry", "Analytics", "Achievements", "Idea Generator"])
     
     # Get all entries
     entries = ShippingEntry.get_all_entries()
@@ -76,6 +77,9 @@ def main():
     
     elif page == "Achievements":
         render_achievements()
+    
+    elif page == "Idea Generator":
+        render_idea_generator()
     
     else:  # Analytics
         st.subheader("Shipping Analytics")
